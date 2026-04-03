@@ -1,77 +1,86 @@
-# Real-Time E-Commerce Data Pipeline
+# Live Crypto Stream: Real-Time Data Engineering Pipeline
 
-A robust, event-driven data engineering pipeline designed to ingest, process, and visualize e-commerce transactions in real-time. This project demonstrates the integration of a distributed messaging system (Kafka), a stream processing engine (Spark), and a search/analytics engine (Elasticsearch).
+A high-performance, event-driven data pipeline that ingests live cryptocurrency trade data via **WebSockets**, processes it in real-time using **Spark Structured Streaming**, and visualizes market volatility in **Kibana**.
 
 ## 🏗️ Architecture
-The pipeline follows a modern "Hot Path" streaming architecture:
-1.  **Data Source**: Python simulator reading from `orders.csv` to mimic live user activity.
-2.  **Ingestion Layer**: **Apache Kafka** acting as the resilient message broker.
-3.  **Stream Processing**: **Spark Structured Streaming (Scala)** performing real-time data validation and filtering (handling missing values/NaNs).
-4.  **Storage & Indexing**: **Elasticsearch** for high-performance data retrieval and full-text search.
-5.  **Visualization**: **Kibana** for live dashboarding and KPI monitoring.
+The pipeline implements a "Hot Path" architecture for sub-second latency:
+1.  **Data Source**: Live market data from the **CoinCap WebSocket API**.
+2.  **Ingestion Layer**: **Apache Kafka** serving as a distributed, fault-tolerant message buffer.
+3.  **Stream Processing**: **Spark Structured Streaming (Scala)** performing real-time schema enforcement, metadata enrichment (joining with `products.csv`), and data transformation.
+4.  **Storage & Indexing**: **Elasticsearch** for high-velocity document indexing and search.
+5.  **Visualization**: **Kibana** for real-time time-series dashboards and price monitoring.
+
 ### 📊 Project Data Flow
 
 ```mermaid
 graph LR
-    %% Data Source & Ingestion
+    subgraph External
+    api[CoinCap WebSocket] -->|Live JSON| producer_py[producer.py]
+    end
+
     subgraph Ingestion
-    orders_csv[(orders.csv)] -.->|Raw Data| producer_py[producer.py]
-    producer_py -->|1. Produce JSON events| kafka_topic[Kafka Topic: user_orders]
+    producer_py -->|1. Produce Events| kafka_topic[Kafka Topic: user_orders]
     end
 
-    %% Stream Processing
     subgraph Streaming
+    products_csv[(products.csv)] -.->|Metadata Join| spark_consumer
     kafka_topic -->|2. Structured Stream| spark_consumer[Spark Structured Streaming]
-    spark_consumer -->|3. Filter NaN & Validate| clean_stream[Clean Stream in Memory]
+    spark_consumer -->|3. Enrich & Validate| clean_stream[Enriched Stream]
     end
 
-    %% Storage & Analytics
     subgraph "ELK Stack"
-    clean_stream -->|4. Index Documents| elasticsearch[(Elasticsearch)]
-    elasticsearch <-->|5. Real-Time Analytics| kibana[Kibana Dashboard]
+    clean_stream -->|4. Index Docs| elasticsearch[(Elasticsearch)]
+    elasticsearch <-->|5. Live Dashboard| kibana[Kibana]
     end
 
-    %% Styling for clarity
-    style orders_csv fill:#f9f,stroke:#333,stroke-width:2px;
-    style kafka_topic fill:#ccf,stroke:#333,stroke-width:2px;
-    style spark_consumer fill:#ff9,stroke:#333,stroke-width:2px;
-    style elasticsearch fill:#dfd,stroke:#333,stroke-width:2px;
-    style kibana fill:#dff,stroke:#333,stroke-width:2px;
+    style api fill:#f96,stroke:#333;
+    style kafka_topic fill:#ccf,stroke:#333;
+    style spark_consumer fill:#ff9,stroke:#333;
+    style elasticsearch fill:#dfd,stroke:#333;
+🛠️ Tech Stack
+Languages: Scala 2.12, Python 3.10
+
+Stream Processing: Apache Spark 3.2.4
+
+Messaging: Confluent Kafka 7.4.0
+
+ELK Stack: Elasticsearch & Kibana 7.17.0
+
+Connectivity: WebSockets (CoinCap API)
+
+Containerization: Docker & Docker Compose
+
+🚀 How to Run
+1. Initialize Infrastructure
+Ensure Docker is running and launch the stack:
+```bash
+docker compose up -d
 ```
 
-## 🛠️ Tech Stack
-* **Languages**: Scala 2.12, Python 3.10
-* **Stream Processing**: Apache Spark 3.2.4
-* **Messaging**: Confluent Kafka 7.4.0
-* **Database**: Elasticsearch 8.10.2
-* **Visualization**: Kibana 8.10.2
-* **Containerization**: Docker & Docker Compose
-
-## 🚀 How to Run
-
-### 1. Start the Infrastructure
-Launch the Kafka and ELK stack using Docker:
-\`\`\`bash
-docker compose up -d
-\`\`\`
-
-### 2. Start the Spark Consumer
-Compile and run the Scala streaming application to begin listening to Kafka:
-\`\`\`bash
+2. Start the Spark Engine
+Compile the Scala application and start the streaming query:
+```bash
 sbt "runMain pipeline.StreamingConsumer"
-\`\`\`
+```
 
-### 3. Run the Data Producer
-Start the Python script to stream records into the pipeline:
-\`\`\`bash
+3. Launch Live Ingestion
+Start the Python producer to bridge the external API to Kafka:
+```bash
 python3 data/producer.py
-\`\`\`
+```
 
-### 4. Monitor & Visualize
-* **Elasticsearch**: Verify data ingestion at \`http://localhost:9200/spark_ecommerce_orders/_count\`
-* **Kibana**: Open \`http://localhost:5601\` to view live dashboards. Create a Data View for \`spark_ecommerce_orders*\`.
+4. Visualize
+Kibana: Access `http://localhost:5601`.
 
-## 🛡️ Resilience & Features
-* **Data Sanitization**: The Spark engine includes a pre-storage filter to drop malformed or \`NaN\` records, ensuring the pipeline remains "Up" even with messy data.
-* **Decoupled Design**: Kafka ensures that if the Spark consumer is restarted, no data is lost; it simply picks up where it left off using checkpointing.
+Data View: Create a view for `crypto_live_final*` using `order_date` as the timestamp.
 
+Real-Time: Set the refresh interval to 2 seconds to watch live price movements.
+
+🛡️ Key Engineering Features
+ISO-8601 Compliance: Enforced strict timestamp serialization to ensure seamless indexing into Elasticsearch date types.
+
+Explicit Schema Enforcement: Utilized StructType in Scala to prevent runtime type-inference errors and ensure data contract stability.
+
+Self-Healing Producer: The Python ingestion layer includes a recursive reconnection loop to handle WebSocket timeouts and network jitter.
+
+Stateless Enrichment: Real-time join between high-velocity Kafka events and static broadcast variables (product metadata).
