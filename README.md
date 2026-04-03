@@ -3,7 +3,6 @@
 A high-performance data engineering pipeline that ingests live cryptocurrency prices via a Python Producer, processes them through a Spark Structured Streaming engine, and visualizes market trends in real-time using Elasticsearch and Grafana.
 
 
-
 ## 🛠️ Tech Stack
 * **Ingestion:** Python (CoinCap API)
 * **Stream Processing:** Apache Kafka & Zookeeper
