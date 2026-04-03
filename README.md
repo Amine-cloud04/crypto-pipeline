@@ -37,6 +37,7 @@ graph LR
     style kafka_topic fill:#ccf,stroke:#333;
     style spark_consumer fill:#ff9,stroke:#333;
     style elasticsearch fill:#dfd,stroke:#333;
+```
 🛠️ Tech Stack
 Languages: Scala 2.12, Python 3.10
 
