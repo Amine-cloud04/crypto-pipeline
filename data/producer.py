@@ -5,8 +5,13 @@ from kafka import KafkaProducer
 import websocket
 
 producer = KafkaProducer(
-    bootstrap_servers=['localhost:9092'],
+    bootstrap_servers=['127.0.0.1:9092'],
     api_version=(0, 10, 1),
+    # 🛠️ Increase these for Cloud IDE stability:
+    request_timeout_ms=60000,      # Wait 60s for a response
+    metadata_max_age_ms=180000,    # Don't refresh metadata too often
+    retry_backoff_ms=1000,         # Wait 1s between retries
+    max_block_ms=120000,           # Wait 2 mins if the buffer is full
     value_serializer=lambda x: json.dumps(x).encode('utf-8')
 )
 
